@@ -34,25 +34,20 @@ then
     exit 1
 fi
 
-# --- 2) Формируем список Running ---
-awk '
-    NR > 1 && $3 == "Running" {
+# --- 2) Формируем списки running и failed серсисов ---
+awk -v runfile="$RUN_FILE" -v failfile="$FAIL_FILE" '
+    NR > 1 {
         name = $1
         sub(/-[^-]{9,10}-[^-]{5}$/, "", name)
-        print name
+        if ($3 == "Running") {
+            print name > runfile
+        } else if ($3 == "Error" || $3 == "CrashLoopBackOff") {
+            print name > failfile
+        }
     }
-' "$OUTFILE" > "$RUN_FILE"
+' "$OUTFILE"
 
-# --- 3) Формируем список Error / CrashLoopBackOff ---
-awk '
-    NR > 1 && ($3 == "Error" || $3 == "CrashLoopBackOff") {
-        name = $1
-        sub(/-[^-]{9,10}-[^-]{5}$/, "", name)
-        print name
-    }
-' "$OUTFILE" > "$FAIL_FILE"
-
-# --- 4) Формируем отчет ---
+# --- 3) Формируем отчет ---
 USER_NAME=$(whoami)
 running_count=$(wc -l < "$RUN_FILE" || echo 0)
 failed_count=$(wc -l < "$FAIL_FILE" || echo 0)
@@ -66,7 +61,7 @@ failed_count=$(wc -l < "$FAIL_FILE" || echo 0)
 
 chmod a+r "$REPORT"
 
-# --- 5) Архивация ---
+# --- 4) Архивация ---
 mkdir -p "$ARCHDIR"
 
 if [ -e "$ARCHIVE" ]
@@ -77,10 +72,10 @@ else
     tar -czf "$ARCHIVE" "$OUTFILE" "$RUN_FILE" "$FAIL_FILE" "$REPORT"
 fi
 
-# --- 6) Удаляем временные файлы ---
+# --- 5) Удаляем временные файлы ---
 rm -f "$OUTFILE" "$RUN_FILE" "$FAIL_FILE" "$REPORT"
 
-# --- 7) Проверка архива ---
+# --- 6) Проверка архива ---
 if tar -tzf "$ARCHIVE" > /dev/null 2>&1
 then
     echo "Архив успешно создан и проверен: $ARCHIVE"
