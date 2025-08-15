@@ -8,7 +8,7 @@ set -euo pipefail
 
 # --- Параметры входного файла ---
 URL="https://raw.githubusercontent.com/GreatMedivack/files/master/list.out"
-OUTFILE="list.out"
+OUTFILE=$(basename "$URL")
 
 # --- Параметры запуска ---
 SERVER=${1:-ServerNotDefined}
